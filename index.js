@@ -20,7 +20,7 @@ function verifyJWT(req, res, next) {
         return res.status(401).send({message: 'unauthorized access'});
     }
    const token = authHeader.split(' ')[1];
-   jwt.verify(token, process.env.SECRET_KEY, function(err, decoded){
+   jwt.verify(token, process.env.ACCESS_TOKEN, function(err, decoded){
     if(err){
         return res.status(403).send({message: 'Forbidden access'})
     }
@@ -28,6 +28,7 @@ function verifyJWT(req, res, next) {
     next();
    })
 }
+
 
 
 async function run(){
@@ -52,6 +53,12 @@ async function run(){
         app.get('/categories', async (req, res) => {
             const results = await categoriesCollection.find({}).toArray();
             res.send(results);
+        });
+
+        app.get('/categories/:id', async (req, res) => {
+            const category = req.params.id;
+            const result = await categoriesCollection.findOne({CategoryName: category});
+            res.send(result);
         });
 
         app.get('/products', async (req, res) => {
@@ -91,11 +98,18 @@ async function run(){
             res.send(result);
         });
 
-        app.get('/bookings', async (req, res) => {
+        app.get('/myorders',verifyJWT, async (req, res) => {
             const {email} = req.query;
             const bookings = await bookingsCollection.find({userEmail: email}).toArray();
             res.send(bookings);
         });
+
+        app.post('/addProduct', async (req, res) => {
+            const data = req.body;
+            const product = await productsCollection.insertOne(data);
+            res.send(product);
+        });
+
     }
     finally {
 
