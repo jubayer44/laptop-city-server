@@ -35,6 +35,7 @@ async function run(){
         const categoriesCollection = client.db("laptopDb").collection("categories");
         const productsCollection = client.db("laptopDb").collection("products");
         const usersCollection = client.db("laptopDb").collection("users");
+        const bookingsCollection = client.db("laptopDb").collection("bookings");
 
         app.get("/jwt", async (req, res)=>{
             const {email} = req.query;
@@ -68,6 +69,12 @@ async function run(){
                 return res.send({acknowledged: false, message})
             }
             const result = await usersCollection.insertOne(user);
+            res.send(result);
+        });
+
+        app.post('/bookings', async (req, res) => {
+            const booking = req.body;
+            const result = await bookingsCollection.insertOne(booking);
             res.send(result);
         });
     }
