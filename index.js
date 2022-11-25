@@ -72,10 +72,29 @@ async function run(){
             res.send(result);
         });
 
+        app.get('/user', async (req, res) => {
+            const {email} = req.query;
+            const user = await usersCollection.findOne({email: email});
+            res.send(user);            
+        });
+
         app.post('/bookings', async (req, res) => {
+            const {email} = req.query;
             const booking = req.body;
+            const filter = {userEmail: email, bookingId: booking.bookingId}
+            const product = await bookingsCollection.findOne(filter);
+            if(product){
+                const message = "This product has already been added"
+                return res.send({acknowledged: false, message});
+            }
             const result = await bookingsCollection.insertOne(booking);
             res.send(result);
+        });
+
+        app.get('/bookings', async (req, res) => {
+            const {email} = req.query;
+            const bookings = await bookingsCollection.find({userEmail: email}).toArray();
+            res.send(bookings);
         });
     }
     finally {
