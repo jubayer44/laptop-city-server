@@ -181,26 +181,19 @@ async function run(){
             const payment = req.body;
             const filter = {bookingId: id}
             const options = {upsert: true}
-            const findItems = await bookingsCollection.find(filter).toArray();
+            // const findItems = await bookingsCollection.find(filter).toArray();
             const updateDoc ={
                 $set: {
                     sold: true,
                     paymentEmail: payment.userEmail
                 }
             }
-            const result = await bookingsCollection.update(filter, updateDoc, options)
-            console.log(result);
-            // const results = await paymentsCollection.insertOne(payment);
-            // const id = payment.bookingId;
-            // const filter = {_id: ObjectId(id)};
-            // const updateDoc = {
-            //   $set: {
-            //     paid: true,
-            //     transactionId: payment.transactionId
-            //   }
-            // };
-            // const updateResult = await bookingsCollection.updateOne(filter, updateDoc);
-            // res.send(results);
+            const result = await bookingsCollection.updateMany(filter, updateDoc, options)
+            const filtr = {_id: ObjectId(id)}
+            const reslt = await productsCollection.updateOne(filtr, updateDoc, options);
+            console.log('number-1', reslt)
+            console.log('nmbr-2', result);
+            res.send(result);
         });
     
 
@@ -210,6 +203,10 @@ async function run(){
     }
 };
 run().catch(err => console.log(err));
+
+
+
+
 
 
 
