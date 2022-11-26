@@ -110,7 +110,7 @@ async function run(){
             res.send(product);
         });
 
-        app.get('/myProducts', async (req, res) => {
+        app.get('/myProducts',verifyJWT, async (req, res) => {
             const {email} = req.query;
             const results = await productsCollection.find({sellerEmail: email}).toArray();
             res.send(results);
@@ -119,6 +119,11 @@ async function run(){
         app.put('/advertise/:id', async (req, res)=> {
             const id = req.params.id;
             const filter = {_id: ObjectId(id)}
+            const product = await productsCollection.findOne(filter)
+            const advertise = product.isAdvertised;
+            if(advertise){
+                return res.send({acknowledged: false, message: "Already added to advertise"})
+            }
             const options = {upsert: true}
             const updatedDoc = {
                 $set: {
@@ -127,7 +132,17 @@ async function run(){
             }
             const result = await productsCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
-            console.log(result);
+        });
+
+        app.get('/advertise', async (req, res) => {
+            const result = await productsCollection.find({isAdvertised: true}).toArray();
+            res.send(result);
+        })
+
+        app.delete('/advertise', async (req, res) => {
+            const {id} = req.query;
+            const result = await productsCollection.deleteOne({_id: ObjectId(id)})
+            res.send(result);
         });
 
     }
