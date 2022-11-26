@@ -66,7 +66,8 @@ async function run(){
         app.get('/products', async (req, res) => {
             const {id} = req.query;
             const results = await productsCollection.find({categoryId: id}).toArray();
-            res.send(results);
+            const unsold = results.filter(result => result?.sold !== true)
+            res.send(unsold);
         });
 
         app.put('/users', async (req, res) => {
