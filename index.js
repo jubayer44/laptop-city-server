@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 const app = express();
 
@@ -108,6 +108,26 @@ async function run(){
             const data = req.body;
             const product = await productsCollection.insertOne(data);
             res.send(product);
+        });
+
+        app.get('/myProducts', async (req, res) => {
+            const {email} = req.query;
+            const results = await productsCollection.find({sellerEmail: email}).toArray();
+            res.send(results);
+        });
+
+        app.put('/advertise/:id', async (req, res)=> {
+            const id = req.params.id;
+            const filter = {_id: ObjectId(id)}
+            const options = {upsert: true}
+            const updatedDoc = {
+                $set: {
+                    isAdvertised: true
+                }
+            }
+            const result = await productsCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+            console.log(result);
         });
 
     }
