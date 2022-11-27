@@ -16,6 +16,7 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.brpx2ub.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+//JWT Verification
 function verifyJWT(req, res, next) {
     const authHeader = req.headers.authorization;
     if(!authHeader){
@@ -40,6 +41,26 @@ async function run(){
         const usersCollection = client.db("laptopDb").collection("users");
         const bookingsCollection = client.db("laptopDb").collection("bookings");
 
+
+        //Admin Verification
+        const verifyAdmin = async (req, res, next) => {
+            const decodedEmail = req.decoded.email;
+            const user = await usersCollection.findOne({email: decodedEmail});
+            if(user.role !== "Admin"){
+                return res.status(403).send({message: 'Forbidden access'});
+            };
+            next();
+
+            console.log(email);
+        };
+
+        app.get('/users/admin/:email', async (req, res)=> {
+            const {email} = req.params;
+            const user = await usersCollection.findOne({email: email});
+            res.send({isAdmin: user?.role ==="Admin"})
+        });
+
+        //Get JWT token
         app.get("/jwt", async (req, res)=>{
             const {email} = req.query;
             const user = await usersCollection.findOne({email: email});
@@ -52,17 +73,20 @@ async function run(){
             }
           })
 
+        //All Categories find here
         app.get('/categories', async (req, res) => {
             const results = await categoriesCollection.find({}).toArray();
             res.send(results);
         });
 
+        //Add a Product routes, single category find here
         app.get('/categories/:id', async (req, res) => {
             const category = req.params.id;
             const result = await categoriesCollection.findOne({CategoryName: category});
             res.send(result);
         });
 
+        //Category Products routes, 
         app.get('/products', async (req, res) => {
             const {id} = req.query;
             const results = await productsCollection.find({categoryId: id}).toArray();
@@ -70,62 +94,71 @@ async function run(){
             res.send(unsold);
         });
 
+        //Add a user to the database
         app.put('/users', async (req, res) => {
             const user = req.body;
             const email = user.email;
             const filter =await usersCollection.findOne({email: email});
             if(filter){
-                const message = "added"
+                const message = "Already added user"
                 return res.send({acknowledged: false, message})
             }
             const result = await usersCollection.insertOne(user);
             res.send(result);
         });
 
+        //Get a user from the database
         app.get('/user', async (req, res) => {
             const {email} = req.query;
             const user = await usersCollection.findOne({email: email});
             res.send(user);            
         });
 
+
+        //Bookings Products routes
         app.post('/bookings', async (req, res) => {
             const {email} = req.query;
             const booking = req.body;
             const filter = {userEmail: email, bookingId: booking.bookingId}
             const product = await bookingsCollection.findOne(filter);
             if(product){
-                const message = "This product has already been added"
+                const message = "You have already booked the product"
                 return res.send({acknowledged: false, message});
             }
             const result = await bookingsCollection.insertOne(booking);
             res.send(result);
         });
 
+        //Get user bookings with user email
         app.get('/myorders',verifyJWT, async (req, res) => {
             const {email} = req.query;
             const bookings = await bookingsCollection.find({userEmail: email}).toArray();
             res.send(bookings);
         });
 
-        app.delete('/myOrders/:id', async(req, res) => {
+        //Delete a bookings product 
+        app.delete('/myOrders/:id',verifyJWT, async(req, res) => {
             const id = req.params.id;
             const result = await bookingsCollection.deleteOne({_id: ObjectId(id)})
             res.send(result);
         });
 
+        //Add a Product route
         app.post('/addProduct', async (req, res) => {
             const data = req.body;
             const product = await productsCollection.insertOne(data);
             res.send(product);
         });
 
+        //Get Seller Products routes
         app.get('/myProducts',verifyJWT, async (req, res) => {
             const {email} = req.query;
             const results = await productsCollection.find({sellerEmail: email}).toArray();
             res.send(results);
         });
 
-        app.put('/advertise/:id', async (req, res)=> {
+        //Add a Product to the advertise section
+        app.put('/advertise/:id', verifyJWT, async (req, res)=> {
             const id = req.params.id;
             const filter = {_id: ObjectId(id)}
             const product = await productsCollection.findOne(filter)
@@ -143,17 +176,20 @@ async function run(){
             res.send(result);
         });
 
+        //Get Advertise products from the database
         app.get('/advertise', async (req, res) => {
             const result = await productsCollection.find({isAdvertised: true}).toArray();
             res.send(result);
         })
 
-        app.delete('/advertise', async (req, res) => {
+        //Delete from my Products
+        app.delete('/advertise', verifyJWT, async (req, res) => {
             const {id} = req.query;
             const result = await productsCollection.deleteOne({_id: ObjectId(id)})
             res.send(result);
         });
 
+        //Payment Route
         app.get('/dashboard/payment/:id', async (req, res) => {
             const id = req.params;
             const filter = {_id: ObjectId(id)}
@@ -161,6 +197,7 @@ async function run(){
             res.send(result)
         });
 
+        //Stripe Payment Route
         app.post('/create-payment-intent',verifyJWT, async (req, res) => {
             const booking = req.body;
             const price = booking.productPrice;
@@ -177,12 +214,12 @@ async function run(){
             });
         });
 
+        //After payment success bookingsCollection and productsCollection updated
         app.put('/payments', async (req, res) => {
             const {id} = req.query;
             const payment = req.body;
             const filter = {bookingId: id}
             const options = {upsert: true}
-            // const findItems = await bookingsCollection.find(filter).toArray();
             const updateDoc ={
                 $set: {
                     sold: true,
@@ -196,6 +233,8 @@ async function run(){
             console.log('nmbr-2', result);
             res.send(result);
         });
+
+
     
 
     }
