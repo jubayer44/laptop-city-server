@@ -107,13 +107,25 @@ async function run(){
             res.send(result);
         });
 
+        //Get all Sellers
+        app.get('/users', async (req, res) => {
+            const {role} = req.query;
+            const result = await usersCollection.find({role: role}).toArray();
+            res.send(result);
+        });
+
+        app.delete('/user/:id', async(req, res) => {
+            const id = req.params.id;
+            const result = await usersCollection.deleteOne({_id: ObjectId(id)});
+            res.send(result);
+        });
+
         //Get a user from the database
         app.get('/user', async (req, res) => {
             const {email} = req.query;
             const user = await usersCollection.findOne({email: email});
             res.send(user);            
         });
-
 
         //Bookings Products routes
         app.post('/bookings', async (req, res) => {
