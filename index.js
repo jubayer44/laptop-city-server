@@ -110,10 +110,27 @@ async function run() {
     });
 
     //Get all Sellers and Buyers
-    app.get("/users", verifyJWT, async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const { role } = req.query;
       const result = await usersCollection.find({ role: role }).toArray();
       res.send(result);
+    });
+
+    //Verified a Seller
+    app.put('/userVerify', verifyJWT, verifyAdmin, async (req, res) => {
+        const id = req.query.id;
+        const filter = {_id: ObjectId(id)};
+        // const result = await usersCollection.findOne(filter)
+        // console.log(result);
+        const options = {upsert : true};
+        const updatedDoc = {
+            $set: {
+                isVerified: true
+            }
+        }
+        const result = await usersCollection.updateOne(filter, updatedDoc, options);
+        res.send(result);
+        console.log(result);
     });
 
     //Delete a user from the database
@@ -131,7 +148,7 @@ async function run() {
     });
 
     //Bookings Products routes
-    app.post("/bookings", async (req, res) => {
+    app.post("/bookings", verifyJWT, async (req, res) => {
       const { email } = req.query;
       const booking = req.body;
       const filter = { userEmail: email, bookingId: booking.bookingId };
@@ -161,7 +178,7 @@ async function run() {
     });
 
     //Add a Product route
-    app.post("/addProduct", async (req, res) => {
+    app.post("/addProduct", verifyJWT, async (req, res) => {
       const data = req.body;
       const product = await productsCollection.insertOne(data);
       res.send(product);
@@ -219,7 +236,7 @@ async function run() {
     });
 
     //Payment Route
-    app.get("/dashboard/payment/:id", async (req, res) => {
+    app.get("/dashboard/payment/:id", verifyJWT, async (req, res) => {
       const id = req.params;
       const filter = { _id: ObjectId(id) };
       const result = await bookingsCollection.findOne(filter);
@@ -242,7 +259,7 @@ async function run() {
     });
 
     //After payment success bookingsCollection and productsCollection updated
-    app.put("/payments", async (req, res) => {
+    app.put("/payments", verifyAdmin, async (req, res) => {
       const { id } = req.query;
       const payment = req.body;
       const filter = { bookingId: id };
@@ -297,13 +314,13 @@ async function run() {
     });
 
     //Get all Reported products
-    app.get('/report', async (req, res) => {
+    app.get('/report', verifyJWT, verifyAdmin, async (req, res) => {
         const results = await reportsCollection.find({}).toArray();
         res.send(results);
     });
 
     //Delete reported products
-    app.delete('/report/:id', async (req, res) => {
+    app.delete('/report/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params;
             const data = req.body;
             const reportFilter = {_id: ObjectId(id), email: data.item.email};
@@ -311,7 +328,7 @@ async function run() {
             const findReport = await reportsCollection.deleteOne(reportFilter);
             const findProduct = await productsCollection.deleteOne(productFilter);
     });
-    
+
   } finally {
   }
 }
