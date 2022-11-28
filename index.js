@@ -7,7 +7,13 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const port = process.env.PORT || 5000;
 const app = express();
 
-app.use(cors());
+const corsConfig = {
+  origin: '',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE']
+  }
+  app.use(cors(corsConfig))
+  app.options("", cors(corsConfig))
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.brpx2ub.mongodb.net/?retryWrites=true&w=majority`;
@@ -75,6 +81,16 @@ async function run() {
     app.get("/categories", async (req, res) => {
       const results = await categoriesCollection.find({}).toArray();
       res.send(results);
+    });
+
+    //Single Category Products
+    app.get('/category/:id', async (req, res) => {
+      const id = req.params.id;
+      const results = await productsCollection
+        .find({ categoryId: id })
+        .toArray();
+      const unsold = results.filter((result) => result?.sold !== true);
+      res.send(unsold);
     });
 
     //Add a Product routes, single category find here
@@ -315,20 +331,8 @@ async function run() {
             const productFilter = {_id: ObjectId(data.item.reportedId)}
             const findReport = await reportsCollection.deleteOne(reportFilter);
             const findProduct = await productsCollection.deleteOne(productFilter);
+            res.send(findReport);
     });
-
-
-    app.get('/category/:id', async (req, res) => {
-      const id = req.params.id;
-      const results = await productsCollection
-        .find({ categoryId: id })
-        .toArray();
-      const unsold = results.filter((result) => result?.sold !== true);
-      res.send(unsold);
-    })
-
-
-
 
 
   } finally {
