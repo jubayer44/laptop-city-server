@@ -86,16 +86,6 @@ async function run() {
       res.send(result);
     });
 
-    //Category Products routes,
-    app.get("/products", async (req, res) => {
-      const { id } = req.query;
-      const results = await productsCollection
-        .find({ categoryId: id })
-        .toArray();
-      const unsold = results.filter((result) => result?.sold !== true);
-      res.send(unsold);
-    });
-
     //Add a user to the database
     app.put("/users", async (req, res) => {
       const user = req.body;
@@ -118,10 +108,8 @@ async function run() {
 
     //Verified a Seller
     app.put('/userVerify', verifyJWT, verifyAdmin, async (req, res) => {
-        const id = req.query.id;
-        const filter = {_id: ObjectId(id)};
-        // const result = await usersCollection.findOne(filter)
-        // console.log(result);
+        const email = req.query.email;
+        const filter = {email: email};
         const options = {upsert : true};
         const updatedDoc = {
             $set: {
@@ -130,7 +118,6 @@ async function run() {
         }
         const result = await usersCollection.updateOne(filter, updatedDoc, options);
         res.send(result);
-        console.log(result);
     });
 
     //Delete a user from the database
@@ -146,6 +133,7 @@ async function run() {
       const user = await usersCollection.findOne({ email: email });
       res.send(user);
     });
+
 
     //Bookings Products routes
     app.post("/bookings", verifyJWT, async (req, res) => {
@@ -236,7 +224,7 @@ async function run() {
     });
 
     //Payment Route
-    app.get("/dashboard/payment/:id", verifyJWT, async (req, res) => {
+    app.get("/dashboard/payment/:id", async (req, res) => {
       const id = req.params;
       const filter = { _id: ObjectId(id) };
       const result = await bookingsCollection.findOne(filter);
@@ -259,7 +247,7 @@ async function run() {
     });
 
     //After payment success bookingsCollection and productsCollection updated
-    app.put("/payments", verifyAdmin, async (req, res) => {
+    app.put("/payments", verifyJWT, async (req, res) => {
       const { id } = req.query;
       const payment = req.body;
       const filter = { bookingId: id };
@@ -328,6 +316,20 @@ async function run() {
             const findReport = await reportsCollection.deleteOne(reportFilter);
             const findProduct = await productsCollection.deleteOne(productFilter);
     });
+
+
+    app.get('/category/:id', async (req, res) => {
+      const id = req.params.id;
+      const results = await productsCollection
+        .find({ categoryId: id })
+        .toArray();
+      const unsold = results.filter((result) => result?.sold !== true);
+      res.send(unsold);
+    })
+
+
+
+
 
   } finally {
   }
